@@ -1,9 +1,15 @@
----
+<!DOCTYPE html>
+<html>
 
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>How2playtest</title>
+  <link rel="stylesheet" href="https://stackedit.io/style.css" />
+</head>
 
----
-
-<h1 id="如何测图（playtest）">如何测图（Playtest）</h1>
+<body class="stackedit">
+  <div class="stackedit__html"><h1 id="如何测图（playtest）">如何测图（Playtest）</h1>
 <h2 id="前言与约定">0 前言与约定</h2>
 <p>我的世界赛履历匮乏。在应聘mwc之前仅不完整地参与了THMC4的测图工作。如此仍能成功入选MWC 2025，也许说明我拥有一定的测图理解。鉴于我已经23岁，不能保证长期具有稳定且足够高的水平，加之目前国内似乎没有专门研究playtest的人员，谱师或选手兼任的情况居多，故在此提出一些个人理解或观点，希望能够给民间各比赛有意向playtest的选手以及想要加入世界赛团队的选手一些参考。我技术有限，文化程度有限，措辞不当在所难免，恳请各位海涵。</p>
 <p>本系列主要面向OSU!Mania 4k赛事的纯粹playtester，即写图经验基本可以忽略不计的玩家。又能写又能打的玩家同样欢迎收看，但无需真正参考本系列内容。都会写图了，还用得着看我一个不会写图的如何评价吗？其他游戏如Malody的测图工作也有共通之处，可以用作参考，但具体术语与涉及到的数值可能会有所出入，请根据实际情况调节。</p>
@@ -87,4 +93,7 @@ MWC赛制中，bo<span class="katex--inline"><span class="katex"><span class="ka
 <strong>5.4 图池更新带来的冲突</strong><br>
 <strong>5.5 自我否定</strong></p>
 <h2 id="总结">6 总结</h2>
+</div>
+</body>
 
+</html>
