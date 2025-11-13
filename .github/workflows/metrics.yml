@@ -1,0 +1,45 @@
+name: cloudrollback-metrics
+
+on:
+  push:
+    branches: [ main ]   
+    # paths: ["**/*.md"] 
+
+jobs:
+  send-metrics:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Collect diff stats
+        id: diff
+        run: |
+          set -euo pipefail
+          # file changes & lines count
+          files_changed=$(git diff --name-only HEAD~1 HEAD | wc -l | tr -d ' ')
+          lines_changed=$(git diff --numstat HEAD~1 HEAD | awk '{a+=$1; b+=$2} END{print a+b}')
+          echo "files_changed=$files_changed" >> $GITHUB_OUTPUT
+          echo "lines_changed=${lines_changed:-0}" >> $GITHUB_OUTPUT
+
+      - name: Send event to API Gateway
+        env:
+          API_URL: ${{ secrets.CR_API_URL }}
+          API_KEY: ${{ secrets.CR_API_KEY }}
+        run: |
+          set -euo pipefail
+          payload=$(jq -n \
+            --arg repo    "${{ github.repository }}" \
+            --arg branch  "${{ github.ref_name }}" \
+            --arg event   "push" \
+            --argjson files ${{ steps.diff.outputs.files_changed || 0 }} \
+            --argjson lines ${{ steps.diff.outputs.lines_changed || 0 }} \
+            '{repo:$repo, branch:$branch, event_type:$event, files_changed:$files, lines_changed:$lines}')
+
+          curl -sS -w "\nHTTP %{http_code}\n" -o resp.json -X POST "$API_URL/events" \
+            -H "Content-Type: application/json" \
+            -H "x-api-key: $API_KEY" \
+            -d "$payload"
+
+          cat resp.json
