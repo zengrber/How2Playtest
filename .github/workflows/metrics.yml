@@ -42,4 +42,6 @@ jobs:
             -H "x-api-key: $API_KEY" \
             -d "$payload"
 
+          echo "::notice title=API_URL::$API_URL/events"
+
           cat resp.json
