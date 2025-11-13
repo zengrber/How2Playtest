@@ -2,46 +2,98 @@ name: cloudrollback-metrics
 
 on:
   push:
-    branches: [ master ]   
-    # paths: ["**/*.md"] 
+    branches:
+      - master       
+    # paths:
+    #   - "**/*.md" # file type filter optional
 
 jobs:
   send-metrics:
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 2
+          fetch-depth: 2   # find last commit
 
-      - name: Collect diff stats
+      - name: Collect diff and stats
         id: diff
+        shell: bash
         run: |
           set -euo pipefail
-          # file changes & lines count
-          files_changed=$(git diff --name-only HEAD~1 HEAD | wc -l | tr -d ' ')
-          lines_changed=$(git diff --numstat HEAD~1 HEAD | awk '{a+=$1; b+=$2} END{print a+b}')
-          echo "files_changed=$files_changed" >> $GITHUB_OUTPUT
-          echo "lines_changed=${lines_changed:-0}" >> $GITHUB_OUTPUT
 
-      - name: Send event to API Gateway
+          # find base commit
+          if git rev-parse HEAD~1 >/dev/null 2>&1; then
+            BASE_REF=$(git rev-parse HEAD~1)
+            echo "Base commit: $BASE_REF"
+          else
+            BASE_REF=
+            echo "This is the first commit; diff against empty tree"
+          fi
+
+          # stats
+          if [ -z "${BASE_REF}" ]; then
+            git diff --name-only HEAD > files.txt
+            # numstat 对比 HEAD 与空树
+            lines_changed=$(git diff --numstat HEAD | awk '{a+=$1; b+=$2} END{print a+b+0}')
+            git diff HEAD > diff.patch
+          else
+            git diff --name-only "$BASE_REF" HEAD > files.txt
+            lines_changed=$(git diff --numstat "$BASE_REF" HEAD | awk '{a+=$1; b+=$2} END{print a+b+0}')
+            git diff "$BASE_REF" HEAD > diff.patch
+          fi
+
+          files_changed=$(wc -l < files.txt | tr -d ' ')
+
+          echo "files_changed=$files_changed"
+          echo "lines_changed=$lines_changed"
+
+          # gzip + base64，去掉换行
+          gzip -c diff.patch | base64 | tr -d '\n' > diff.b64
+
+          echo "files_changed=$files_changed" >> $GITHUB_OUTPUT
+          echo "lines_changed=$lines_changed" >> $GITHUB_OUTPUT
+
+      - name: Send event to CloudRollback API
         env:
           API_URL: https://ieeguhrobg.execute-api.us-east-1.amazonaws.com/prod
           API_KEY: jQKXkxrNGH8eJddiFX8AX5PngLVT82Mh2sg0KbqO
+        shell: bash
         run: |
           set -euo pipefail
+
+          # base64 diff
+          diff_b64=$(cat diff.b64)
+
+          # JSON payload
           payload=$(jq -n \
-            --arg repo    "${{ github.repository }}" \
-            --arg branch  "${{ github.ref_name }}" \
-            --arg event   "push" \
+            --arg repo      "${{ github.repository }}" \
+            --arg branch    "${{ github.ref_name }}" \
+            --arg commit    "${{ github.sha }}" \
+            --arg event     "push" \
+            --arg diff_b64  "$diff_b64" \
+            --arg actor     "${{ github.actor }}" \
             --argjson files ${{ steps.diff.outputs.files_changed || 0 }} \
             --argjson lines ${{ steps.diff.outputs.lines_changed || 0 }} \
-            '{repo:$repo, branch:$branch, event_type:$event, files_changed:$files, lines_changed:$lines}')
+            '{
+               repo:        $repo,
+               branch:      $branch,
+               commit_sha:  $commit,
+               event_type:  $event,
+               actor:       $actor,
+               files_changed: $files,
+               lines_changed: $lines,
+               diff_b64:    $diff_b64
+             }')
 
+          echo "Payload:"
+          echo "$payload" | jq .
+
+          # API Gateway /events
           curl -sS -w "\nHTTP %{http_code}\n" -o resp.json -X POST "$API_URL/events" \
             -H "Content-Type: application/json" \
             -H "x-api-key: $API_KEY" \
             -d "$payload"
 
-          echo "::notice title=API_URL::$API_URL/events"
-
+          echo "Response from Lambda:"
           cat resp.json
