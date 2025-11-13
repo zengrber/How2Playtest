@@ -25,8 +25,8 @@ jobs:
 
       - name: Send event to API Gateway
         env:
-          API_URL: "https://ieeguhrobg.execute-api.us-east-1.amazonaws.com/prod"
-          API_KEY: "jQKXkxrNGH8eJddiFX8AX5PngLVT82Mh2sg0KbqO"
+          API_URL: https://ieeguhrobg.execute-api.us-east-1.amazonaws.com/prod
+          API_KEY: jQKXkxrNGH8eJddiFX8AX5PngLVT82Mh2sg0KbqO
         run: |
           set -euo pipefail
           payload=$(jq -n \
